@@ -23,6 +23,10 @@ const player = {
     dy: 0
 };
 
+let slowed = false;
+let slowEffectTimer = null;
+
+
 // Generate bots with random direction & speed
 const bots = [];
 const botCount = 5;
@@ -59,6 +63,37 @@ function updatePlayer() {
     if (player.x + player.radius > canvas.width) player.x = canvas.width - player.radius;
     if (player.y - player.radius < 0) player.y = player.radius;
     if (player.y + player.radius > canvas.height) player.y = canvas.height - player.radius;
+
+    // Check for collision with obstacles
+obstacles.forEach(ob => {
+  if (isCircleCollidingWithRect(player, ob) && !slowed) {
+    slowed = true;
+
+    // Reduce player speed
+    player.speed = 2.5;
+
+    // Slightly increase bot speed
+    bots.forEach(bot => {
+      if (!bot.frozen) {
+        bot.dx *= 1.5;
+        bot.dy *= 1.5;
+      }
+    });
+
+    // Reset after 10 seconds
+    slowEffectTimer = setTimeout(() => {
+      player.speed = 5;
+      bots.forEach(bot => {
+        if (!bot.frozen) {
+          bot.dx /= 1.5;
+          bot.dy /= 1.5;
+        }
+      });
+      slowed = false;
+    }, 10000);
+  }
+});
+
 }
 
 // Update bot positions
@@ -195,7 +230,7 @@ function gameLoop() {
         ctx.fillStyle = ob.color;
         ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
     });
-    
+
     drawCircle(player);
     bots.forEach(bot => drawCircle(bot));
 
