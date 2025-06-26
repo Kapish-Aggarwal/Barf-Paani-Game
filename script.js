@@ -33,10 +33,12 @@ for (let i = 0; i < botCount; i++) {
     y: Math.random() * canvas.height,
     radius: 20,
     color: 'blue',
-    dx: (Math.random() - 0.5) * 2, // Random speed -1 to 1
-    dy: (Math.random() - 0.5) * 2
+    dx: (Math.random() - 0.5) * 2,
+    dy: (Math.random() - 0.5) * 2,
+    frozen: false // NEW: frozen flag
   });
 }
+
 
 // Draw circle helper
 function drawCircle(obj) {
@@ -62,18 +64,30 @@ function updatePlayer() {
 // Update bot positions
 function updateBots() {
   bots.forEach(bot => {
-    bot.x += bot.dx;
-    bot.y += bot.dy;
+    if (!bot.frozen) {
+      // Check for collision with player
+      if (checkCollision(player, bot)) {
+        bot.frozen = true;
+        bot.color = 'gray';  // Mark as frozen visually
+        bot.dx = 0;          // Stop movement
+        bot.dy = 0;
+      }
 
-    // Bounce off walls
-    if (bot.x - bot.radius < 0 || bot.x + bot.radius > canvas.width) {
-      bot.dx *= -1;
-    }
-    if (bot.y - bot.radius < 0 || bot.y + bot.radius > canvas.height) {
-      bot.dy *= -1;
+      // Regular movement
+      bot.x += bot.dx;
+      bot.y += bot.dy;
+
+      // Bounce off canvas edges
+      if (bot.x - bot.radius < 0 || bot.x + bot.radius > canvas.width) {
+        bot.dx *= -1;
+      }
+      if (bot.y - bot.radius < 0 || bot.y + bot.radius > canvas.height) {
+        bot.dy *= -1;
+      }
     }
   });
 }
+
 
 // Input handling
 function keyDownHandler(e) {
@@ -103,6 +117,13 @@ function gameLoop() {
   bots.forEach(bot => drawCircle(bot));
 
   requestAnimationFrame(gameLoop);
+}
+// Collision detection
+function checkCollision(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return distance < a.radius + b.radius;
 }
 
 gameLoop();
