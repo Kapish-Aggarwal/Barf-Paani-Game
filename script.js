@@ -64,29 +64,56 @@ function updatePlayer() {
 // Update bot positions
 function updateBots() {
   bots.forEach(bot => {
-    if (!bot.frozen) {
-      // Check for collision with player
-      if (checkCollision(player, bot)) {
-        bot.frozen = true;
-        bot.color = 'gray';  // Mark as frozen visually
-        bot.dx = 0;          // Stop movement
-        bot.dy = 0;
-      }
+    if (bot.frozen) return; // Frozen bots don't move
 
-      // Regular movement
-      bot.x += bot.dx;
-      bot.y += bot.dy;
+    // Try to find nearest frozen bot within range
+    let target = null;
+    let minDist = 150; // Only consider frozen bots within this distance
 
-      // Bounce off canvas edges
-      if (bot.x - bot.radius < 0 || bot.x + bot.radius > canvas.width) {
-        bot.dx *= -1;
+    bots.forEach(other => {
+      if (other !== bot && other.frozen) {
+        const dx = other.x - bot.x;
+        const dy = other.y - bot.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < minDist) {
+          minDist = distance;
+          target = other;
+        }
       }
-      if (bot.y - bot.radius < 0 || bot.y + bot.radius > canvas.height) {
-        bot.dy *= -1;
-      }
+    });
+
+    if (target) {
+      // Move toward the frozen teammate
+      const angle = Math.atan2(target.y - bot.y, target.x - bot.x);
+      const speed = 1.5; // Slower speed for rescue
+      bot.dx = Math.cos(angle) * speed;
+      bot.dy = Math.sin(angle) * speed;
     }
+
+    bot.x += bot.dx;
+    bot.y += bot.dy;
+
+    // Bounce off canvas edges
+    if (bot.x - bot.radius < 0 || bot.x + bot.radius > canvas.width) {
+      bot.dx *= -1;
+    }
+    if (bot.y - bot.radius < 0 || bot.y + bot.radius > canvas.height) {
+      bot.dy *= -1;
+    }
+
+    // Unfreeze logic
+    bots.forEach(other => {
+      if (other !== bot && other.frozen && checkCollision(bot, other)) {
+        other.frozen = false;
+        other.color = 'blue';
+        // Assign new random direction to unfrozen bot
+        other.dx = (Math.random() - 0.5) * 2;
+        other.dy = (Math.random() - 0.5) * 2;
+      }
+    });
   });
 }
+
 
 
 // Input handling
