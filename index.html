@@ -1,14 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Barf-Paani</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <canvas id="gameCanvas"></canvas>
 
-  <script src="script.js"></script>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Barf-Paani</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div id="controls" style="position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:10;">
+        <button onclick="selectDifficulty('easy')">Easy</button>
+        <button onclick="selectDifficulty('medium')">Medium</button>
+        <button onclick="selectDifficulty('hard')">Hard</button>
+    </div>
+
+    <div id="timer" style="position:absolute; top:70px; left:20px; font-size:24px; color:white; font-family:Arial;">
+    </div>
+
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="script.js"></script>
 </body>
+
 </html>
