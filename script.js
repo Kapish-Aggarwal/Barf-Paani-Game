@@ -23,7 +23,7 @@ const player = {
   dy: 0
 };
 
-// Bot array (unchanged for now)
+// Generate bots with random direction & speed
 const bots = [];
 const botCount = 5;
 
@@ -32,7 +32,9 @@ for (let i = 0; i < botCount; i++) {
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
     radius: 20,
-    color: 'blue'
+    color: 'blue',
+    dx: (Math.random() - 0.5) * 2, // Random speed -1 to 1
+    dy: (Math.random() - 0.5) * 2
   });
 }
 
@@ -45,16 +47,32 @@ function drawCircle(obj) {
   ctx.closePath();
 }
 
-// Player movement update
+// Update player
 function updatePlayer() {
   player.x += player.dx;
   player.y += player.dy;
 
-  // Boundary checks
+  // Boundary constraint
   if (player.x - player.radius < 0) player.x = player.radius;
   if (player.x + player.radius > canvas.width) player.x = canvas.width - player.radius;
   if (player.y - player.radius < 0) player.y = player.radius;
   if (player.y + player.radius > canvas.height) player.y = canvas.height - player.radius;
+}
+
+// Update bot positions
+function updateBots() {
+  bots.forEach(bot => {
+    bot.x += bot.dx;
+    bot.y += bot.dy;
+
+    // Bounce off walls
+    if (bot.x - bot.radius < 0 || bot.x + bot.radius > canvas.width) {
+      bot.dx *= -1;
+    }
+    if (bot.y - bot.radius < 0 || bot.y + bot.radius > canvas.height) {
+      bot.dy *= -1;
+    }
+  });
 }
 
 // Input handling
@@ -73,14 +91,15 @@ function keyUpHandler(e) {
 document.addEventListener("keydown", keyDownHandler);
 document.addEventListener("keyup", keyUpHandler);
 
-// Main game loop
+// Game loop
 function gameLoop() {
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   updatePlayer();
-  drawCircle(player);
+  updateBots();
 
+  drawCircle(player);
   bots.forEach(bot => drawCircle(bot));
 
   requestAnimationFrame(gameLoop);
