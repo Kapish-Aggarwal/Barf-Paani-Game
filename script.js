@@ -1,54 +1,29 @@
+// script.js
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-window.addEventListener('resize', () => {
+function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+window.addEventListener("keydown", function (e) {
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+    e.preventDefault();
+  }
 });
 
-// Game state
-let baseBotSpeed = 1.0;
-let totalTime = 0;
-let remainingTime = 0;
-let timerInterval = null;
-let animationId;
-
-// Player setup
-const player = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  radius: 20,
-  color: 'red',
-  speed: 5,
-  dx: 0,
-  dy: 0
-};
-
-// Bots
-const bots = [];
-const botCount = 5;
-for (let i = 0; i < botCount; i++) {
-  bots.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    radius: 20,
-    color: 'blue',
-    dx: (Math.random() - 0.5) * 2,
-    dy: (Math.random() - 0.5) * 2,
-    frozen: false
-  });
+function isRectOverlap(r1, r2) {
+  return !(
+    r1.x + r1.width < r2.x ||
+    r2.x + r2.width < r1.x ||
+    r1.y + r1.height < r2.y ||
+    r2.y + r2.height < r1.y
+  );
 }
 
-// Obstacles
-const obstacles = [];
-const obstacleCount = 5;
-let slowed = false;
-let slowEffectTimer = null;
-
-// Circle-rectangle collision
 function isCircleCollidingWithRect(circle, rect) {
   const distX = Math.abs(circle.x - rect.x - rect.width / 2);
   const distY = Math.abs(circle.y - rect.y - rect.height / 2);
@@ -61,96 +36,127 @@ function isCircleCollidingWithRect(circle, rect) {
 
   const dx = distX - rect.width / 2;
   const dy = distY - rect.height / 2;
-  return (dx * dx + dy * dy <= circle.radius * circle.radius);
+  return dx * dx + dy * dy <= (circle.radius * circle.radius);
 }
 
-// Generate non-overlapping obstacles
-for (let i = 0; i < obstacleCount; i++) {
-  let rect, collides;
+let totalTime = 0, remainingTime = 0, timerInterval = null;
+let animationId, gameRunning = false, slowed = false;
 
-  do {
-    collides = false;
-    rect = {
-      x: Math.random() * (canvas.width - 100),
-      y: Math.random() * (canvas.height - 100),
-      width: 60,
-      height: 60,
-      color: '#444'
-    };
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  radius: 20,
+  color: 'red',
+  speed: 5,
+  defaultSpeed: 5,
+  dx: 0,
+  dy: 0
+};
 
-    if (isCircleCollidingWithRect(player, rect)) collides = true;
-    for (const bot of bots) {
-      if (isCircleCollidingWithRect(bot, rect)) {
-        collides = true;
-        break;
-      }
-    }
-  } while (collides);
+const bots = [];
+const botCount = 5;
+let baseBotSpeed = 2.0;
 
-  obstacles.push(rect);
-}
-
-// Collision detection
-function checkCollision(a, b) {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  return distance < a.radius + b.radius;
-}
-
-function drawCircle(obj) {
-  ctx.beginPath();
-  ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
-  ctx.fillStyle = obj.color;
-  ctx.fill();
-  ctx.closePath();
-}
-
-// Player update
-function updatePlayer() {
-  player.x += player.dx;
-  player.y += player.dy;
-
-  if (player.x - player.radius < 0) player.x = player.radius;
-  if (player.x + player.radius > canvas.width) player.x = canvas.width - player.radius;
-  if (player.y - player.radius < 0) player.y = player.radius;
-  if (player.y + player.radius > canvas.height) player.y = canvas.height - player.radius;
-
-  // Obstacle collision slows player
-  obstacles.forEach(ob => {
-    if (isCircleCollidingWithRect(player, ob) && !slowed) {
-      slowed = true;
-      player.speed = 2.5;
-
-      bots.forEach(bot => {
-        if (!bot.frozen) {
-          bot.dx *= 1.5;
-          bot.dy *= 1.5;
-        }
-      });
-
-      slowEffectTimer = setTimeout(() => {
-        player.speed = 5;
-        bots.forEach(bot => {
-          if (!bot.frozen) {
-            bot.dx /= 1.5;
-            bot.dy /= 1.5;
-          }
-        });
-        slowed = false;
-      }, 10000);
-    }
+for (let i = 0; i < botCount; i++) {
+  const angle = Math.random() * 2 * Math.PI;
+  const speed = baseBotSpeed;
+  bots.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    radius: 20,
+    color: 'blue',
+    speed: speed,
+    baseSpeed: speed,
+    dx: Math.cos(angle) * speed,
+    dy: Math.sin(angle) * speed,
+    frozen: false
   });
 }
 
-// Bot update
+const obstacleCount = 12;
+const obstacles = [];
+for (let i = 0; i < obstacleCount; i++) {
+  let rect, attempts = 0, collides;
+  do {
+    rect = {
+      width: 60,
+      height: 60,
+      x: Math.random() * (canvas.width - 100),
+      y: Math.random() * (canvas.height - 100),
+      color: '#444'
+    };
+    collides = isCircleCollidingWithRect(player, rect);
+    for (const b of bots) collides ||= isCircleCollidingWithRect(b, rect);
+    for (const ob of obstacles) collides ||= isRectOverlap(ob, rect);
+    attempts++;
+  } while (collides && attempts < 1000);
+  obstacles.push(rect);
+}
+
+function drawCircle(obj, glow = false) {
+  ctx.beginPath();
+  ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+  ctx.fillStyle = obj.color;
+  ctx.shadowColor = glow ? obj.color : 'transparent';
+  ctx.shadowBlur = glow ? 15 : 0;
+  ctx.fill();
+  ctx.closePath();
+  ctx.shadowBlur = 0;
+}
+
+function updatePlayer() {
+  const nextX = player.x + player.dx;
+  const nextY = player.y + player.dy;
+
+  for (const ob of obstacles) {
+    if (isCircleCollidingWithRect({ ...player, x: nextX, y: nextY }, ob)) {
+      if (!slowed) {
+        slowed = true;
+        player.speed = player.defaultSpeed / 2;
+        bots.forEach(bot => {
+          if (!bot.frozen) {
+            const angle = Math.atan2(bot.dy, bot.dx);
+            bot.dx = Math.cos(angle) * bot.baseSpeed * 3;
+            bot.dy = Math.sin(angle) * bot.baseSpeed * 3;
+          }
+        });
+
+        setTimeout(() => {
+          player.defaultSpeed *= 0.5;
+          player.speed = player.defaultSpeed;
+          bots.forEach(bot => {
+            if (!bot.frozen) {
+              bot.baseSpeed += 0.5;
+              const angle = Math.atan2(bot.dy, bot.dx);
+              bot.dx = Math.cos(angle) * bot.baseSpeed;
+              bot.dy = Math.sin(angle) * bot.baseSpeed;
+            }
+          });
+          slowed = false;
+        }, 10000);
+      }
+      return;
+    }
+  }
+
+  player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, nextX));
+  player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, nextY));
+}
+
+function checkCollision(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy) < a.radius + b.radius;
+}
+
 function updateBots() {
+  let allFrozen = true;
   bots.forEach(bot => {
     if (bot.frozen) return;
+    allFrozen = false;
 
     let target = null;
     let minDist = 150;
-
     bots.forEach(other => {
       if (other !== bot && other.frozen) {
         const dx = other.x - bot.x;
@@ -165,9 +171,8 @@ function updateBots() {
 
     if (target) {
       const angle = Math.atan2(target.y - bot.y, target.x - bot.x);
-      const speed = 1.5;
-      bot.dx = Math.cos(angle) * speed;
-      bot.dy = Math.sin(angle) * speed;
+      bot.dx = Math.cos(angle) * bot.baseSpeed;
+      bot.dy = Math.sin(angle) * bot.baseSpeed;
     }
 
     bot.x += bot.dx;
@@ -180,8 +185,9 @@ function updateBots() {
       if (other !== bot && other.frozen && checkCollision(bot, other)) {
         other.frozen = false;
         other.color = 'blue';
-        other.dx = (Math.random() - 0.5) * 2 * baseBotSpeed;
-        other.dy = (Math.random() - 0.5) * 2 * baseBotSpeed;
+        const angle = Math.random() * 2 * Math.PI;
+        other.dx = Math.cos(angle) * other.baseSpeed;
+        other.dy = Math.sin(angle) * other.baseSpeed;
       }
     });
 
@@ -192,9 +198,10 @@ function updateBots() {
       bot.dy = 0;
     }
   });
+
+  if (allFrozen && gameRunning) endGame(true);
 }
 
-// Controls
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") player.dx = player.speed;
   if (e.key === "ArrowLeft") player.dx = -player.speed;
@@ -206,12 +213,11 @@ document.addEventListener("keyup", e => {
   if (["ArrowUp", "ArrowDown"].includes(e.key)) player.dy = 0;
 });
 
-// Timer
 function updateTimerDisplay() {
-  const timerEl = document.getElementById('timer');
-  const minutes = Math.floor(remainingTime / 60);
-  const seconds = remainingTime % 60;
-  timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const el = document.getElementById('timer');
+  const m = Math.floor(remainingTime / 60);
+  const s = remainingTime % 60;
+  el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function startGameTimer() {
@@ -219,59 +225,63 @@ function startGameTimer() {
   timerInterval = setInterval(() => {
     remainingTime--;
     updateTimerDisplay();
-
     if (remainingTime <= 0) {
       clearInterval(timerInterval);
-      endGame();
+      endGame(false);
     }
   }, 1000);
 }
 
-function endGame() {
-  alert("⏰ Time's up! Game Over!");
+function endGame(won) {
+  gameRunning = false;
   cancelAnimationFrame(animationId);
+  document.getElementById('gameMessage').style.display = 'block';
+  document.getElementById('gameMessage').textContent = won ? "🎉 You Win!" : "⏰ Time's up! You Lose!";
+  setTimeout(() => location.reload(), 4000);
 }
 
-// Game loop
 function gameLoop() {
-  ctx.fillStyle = "#2c3e50";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   updatePlayer();
   updateBots();
-
   obstacles.forEach(ob => {
     ctx.fillStyle = ob.color;
     ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
   });
-
   drawCircle(player);
-  bots.forEach(bot => drawCircle(bot));
-
-  animationId = requestAnimationFrame(gameLoop);
+  bots.forEach(bot => drawCircle(bot, bot.frozen));
+  if (gameRunning) animationId = requestAnimationFrame(gameLoop);
 }
 
-// Difficulty button handler
 function selectDifficulty(mode) {
   if (mode === 'easy') {
     totalTime = 300;
-    baseBotSpeed = 1.0;
+    baseBotSpeed = 2.0;
   } else if (mode === 'medium') {
     totalTime = 180;
-    baseBotSpeed = 1.5;
+    baseBotSpeed = 2.5;
   } else if (mode === 'hard') {
     totalTime = 120;
-    baseBotSpeed = 2.0;
+    baseBotSpeed = 3.0;
   }
 
   remainingTime = totalTime;
-
   bots.forEach(bot => {
-    bot.dx = (Math.random() - 0.5) * 2 * baseBotSpeed;
-    bot.dy = (Math.random() - 0.5) * 2 * baseBotSpeed;
+    const angle = Math.random() * 2 * Math.PI;
+    bot.baseSpeed = baseBotSpeed;
+    bot.dx = Math.cos(angle) * baseBotSpeed;
+    bot.dy = Math.sin(angle) * baseBotSpeed;
+    bot.frozen = false;
+    bot.color = 'blue';
   });
 
+  player.defaultSpeed = 5;
+  player.speed = 5;
+
   document.getElementById('controls').style.display = 'none';
+  document.getElementById('intro').style.display = 'none';
+
+  gameRunning = true;
   startGameTimer();
   gameLoop();
 }

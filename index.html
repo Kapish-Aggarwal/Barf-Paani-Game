@@ -1,25 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Barf-Paani 2D Game</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barf-Paani Game</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Difficulty Selection UI -->
-  <div id="controls">
-    <button onclick="selectDifficulty('easy')">Easy</button>
-    <button onclick="selectDifficulty('medium')">Medium</button>
-    <button onclick="selectDifficulty('hard')">Hard</button>
+  <div id="intro">
+    <h1>Barf-Paani: Freeze Tag Game</h1>
+    <div id="controls">
+      <button onclick="selectDifficulty('easy')">Easy</button>
+      <button onclick="selectDifficulty('medium')">Medium</button>
+      <button onclick="selectDifficulty('hard')">Hard</button>
+    </div>
   </div>
 
-  <!-- Timer Display -->
-  <div id="timer"></div>
+  <div id="timerContainer">
+    Time Left: <span id="timer">0:00</span>
+  </div>
 
-  <!-- Canvas Game Area -->
   <canvas id="gameCanvas"></canvas>
 
-  <script src="script.js" defer></script>
+  <div id="gameMessage"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>
