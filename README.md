@@ -44,8 +44,8 @@ This project was created entirely through step-by-step prompting using ChatGPT. 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/barf-paani-game.git
-   cd barf-paani-game
+   https://github.com/Kapish-Aggarwal/Barf-Paani-Game.git
+   cd Barf-Paani-Game
    ```
 2. Open `index.html` in your browser.
 
