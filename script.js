@@ -261,14 +261,30 @@ function gameLoop() {
 }
 
 // Handle difficulty selection from UI
+let baseBotSpeed = 1.0; // default
+
 function selectDifficulty(mode) {
-  if (mode === 'easy') totalTime = 300;
-  else if (mode === 'medium') totalTime = 180;
-  else if (mode === 'hard') totalTime = 120;
+  if (mode === 'easy') {
+    totalTime = 300;
+    baseBotSpeed = 1.0;
+  } else if (mode === 'medium') {
+    totalTime = 180;
+    baseBotSpeed = 1.5;
+  } else if (mode === 'hard') {
+    totalTime = 120;
+    baseBotSpeed = 2.0;
+  }
 
   remainingTime = totalTime;
 
-  document.getElementById('controls').style.display = 'none'; // hide buttons
+  // Set speed for each bot
+  bots.forEach(bot => {
+    bot.dx = (Math.random() - 0.5) * 2 * baseBotSpeed;
+    bot.dy = (Math.random() - 0.5) * 2 * baseBotSpeed;
+  });
+
+  document.getElementById('controls').style.display = 'none'; // Hide difficulty buttons
   startGameTimer();
   gameLoop();
 }
+
