@@ -9,17 +9,14 @@ window.addEventListener('resize', () => {
   canvas.height = window.innerHeight;
 });
 
-// Background color
-const backgroundColor = '#2c3e50';
-
 // Game state
-let animationId;
-let timerInterval;
+let baseBotSpeed = 1.0;
 let totalTime = 0;
 let remainingTime = 0;
-let gameStarted = false;
+let timerInterval = null;
+let animationId;
 
-// Player
+// Player setup
 const player = {
   x: canvas.width / 2,
   y: canvas.height / 2,
@@ -33,7 +30,6 @@ const player = {
 // Bots
 const bots = [];
 const botCount = 5;
-
 for (let i = 0; i < botCount; i++) {
   bots.push({
     x: Math.random() * canvas.width,
@@ -68,7 +64,7 @@ function isCircleCollidingWithRect(circle, rect) {
   return (dx * dx + dy * dy <= circle.radius * circle.radius);
 }
 
-// Generate obstacles avoiding player/bots
+// Generate non-overlapping obstacles
 for (let i = 0; i < obstacleCount; i++) {
   let rect, collides;
 
@@ -83,7 +79,6 @@ for (let i = 0; i < obstacleCount; i++) {
     };
 
     if (isCircleCollidingWithRect(player, rect)) collides = true;
-
     for (const bot of bots) {
       if (isCircleCollidingWithRect(bot, rect)) {
         collides = true;
@@ -95,7 +90,7 @@ for (let i = 0; i < obstacleCount; i++) {
   obstacles.push(rect);
 }
 
-// Circle-circle collision
+// Collision detection
 function checkCollision(a, b) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
@@ -103,7 +98,6 @@ function checkCollision(a, b) {
   return distance < a.radius + b.radius;
 }
 
-// Draw a circle
 function drawCircle(obj) {
   ctx.beginPath();
   ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
@@ -112,7 +106,7 @@ function drawCircle(obj) {
   ctx.closePath();
 }
 
-// Update player movement and handle obstacle effects
+// Player update
 function updatePlayer() {
   player.x += player.dx;
   player.y += player.dy;
@@ -122,6 +116,7 @@ function updatePlayer() {
   if (player.y - player.radius < 0) player.y = player.radius;
   if (player.y + player.radius > canvas.height) player.y = canvas.height - player.radius;
 
+  // Obstacle collision slows player
   obstacles.forEach(ob => {
     if (isCircleCollidingWithRect(player, ob) && !slowed) {
       slowed = true;
@@ -148,7 +143,7 @@ function updatePlayer() {
   });
 }
 
-// Update bots
+// Bot update
 function updateBots() {
   bots.forEach(bot => {
     if (bot.frozen) return;
@@ -185,8 +180,8 @@ function updateBots() {
       if (other !== bot && other.frozen && checkCollision(bot, other)) {
         other.frozen = false;
         other.color = 'blue';
-        other.dx = (Math.random() - 0.5) * 2;
-        other.dy = (Math.random() - 0.5) * 2;
+        other.dx = (Math.random() - 0.5) * 2 * baseBotSpeed;
+        other.dy = (Math.random() - 0.5) * 2 * baseBotSpeed;
       }
     });
 
@@ -199,23 +194,19 @@ function updateBots() {
   });
 }
 
-// Input controls
-function keyDownHandler(e) {
+// Controls
+document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") player.dx = player.speed;
   if (e.key === "ArrowLeft") player.dx = -player.speed;
   if (e.key === "ArrowUp") player.dy = -player.speed;
   if (e.key === "ArrowDown") player.dy = player.speed;
-}
-
-function keyUpHandler(e) {
+});
+document.addEventListener("keyup", e => {
   if (["ArrowRight", "ArrowLeft"].includes(e.key)) player.dx = 0;
   if (["ArrowUp", "ArrowDown"].includes(e.key)) player.dy = 0;
-}
+});
 
-document.addEventListener("keydown", keyDownHandler);
-document.addEventListener("keyup", keyUpHandler);
-
-// Timer display
+// Timer
 function updateTimerDisplay() {
   const timerEl = document.getElementById('timer');
   const minutes = Math.floor(remainingTime / 60);
@@ -241,9 +232,9 @@ function endGame() {
   cancelAnimationFrame(animationId);
 }
 
-// Start game
+// Game loop
 function gameLoop() {
-  ctx.fillStyle = backgroundColor;
+  ctx.fillStyle = "#2c3e50";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   updatePlayer();
@@ -260,9 +251,7 @@ function gameLoop() {
   animationId = requestAnimationFrame(gameLoop);
 }
 
-// Handle difficulty selection from UI
-let baseBotSpeed = 1.0; // default
-
+// Difficulty button handler
 function selectDifficulty(mode) {
   if (mode === 'easy') {
     totalTime = 300;
@@ -277,14 +266,12 @@ function selectDifficulty(mode) {
 
   remainingTime = totalTime;
 
-  // Set speed for each bot
   bots.forEach(bot => {
     bot.dx = (Math.random() - 0.5) * 2 * baseBotSpeed;
     bot.dy = (Math.random() - 0.5) * 2 * baseBotSpeed;
   });
 
-  document.getElementById('controls').style.display = 'none'; // Hide difficulty buttons
+  document.getElementById('controls').style.display = 'none';
   startGameTimer();
   gameLoop();
 }
-
