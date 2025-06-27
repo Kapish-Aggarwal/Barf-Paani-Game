@@ -76,7 +76,11 @@ Each improvement was prompted and tested step-by-step.
 * Multiple player support or local co-op
 * Score tracking and leaderboard
 
-## 🙌 Acknowledgements
+💬 Suggestions Welcome
+
+This project is open for feedback and contributions! If you have an idea, improvement, or bug fix, feel free to raise an issue or open a pull request.
+
+🙌 Acknowledgements
 
 Thanks to OpenAI’s ChatGPT for generating the full project using natural language instructions!
 
